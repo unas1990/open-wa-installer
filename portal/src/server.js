@@ -65,6 +65,8 @@ const proxy = createProxyMiddleware({
   target: backend,
   changeOrigin: true,
   ws: true,
+  timeout: 0,
+  proxyTimeout: 0,
   logLevel: 'silent'
 });
 
@@ -72,4 +74,6 @@ app.use('/', auth.requireAuth, proxy);
 
 const port = process.env.PORT || 2785;
 const server = app.listen(port, ()=>console.log('OpenWA portal listening on', port));
-server.on('upgrade', proxy.upgrade);
+server.on('upgrade', (req, socket, head) => {
+  proxy.upgrade(req, socket, head);
+});
