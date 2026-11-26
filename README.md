@@ -1,8 +1,8 @@
-# OpenWA Installer
+# OpenWA Installer + Auth Portal
 
-Installer untuk **OpenWA** (official) dari https://www.open-wa.org/ (rmyndharis/OpenWA) di VPS Ubuntu 24.
+Installer untuk OpenWA resmi (https://www.open-wa.org/) dengan portal login (user/pass + role) di depan dashboard.
 
-## Install
+## Install (Ubuntu 24)
 ```bash
 sudo apt update && sudo apt install -y git
 git clone https://github.com/unas1990/open-wa-installer.git
@@ -11,16 +11,17 @@ sudo bash installer/install.sh
 ```
 
 Installer akan:
-- Install Docker + Compose
-- Clone OpenWA ke `/opt/openwa`
-- Jalankan single-container (SQLite) dengan dashboard di satu port
-- Tampilkan Admin API key
+- Install Node 22, Docker, PM2
+- Clone OpenWA ke `/opt/openwa` (backend port 2786 internal)
+- Setup portal di `/opt/openwa-portal` (public port, default 2785)
+- Buat admin portal dari prompt
 
 ## Akses
-- Dashboard/API: `http://<IP-VPS>:<PORT>` (default 2785)
-- Admin API key: `docker exec openwa-api cat /app/data/.api-key`
+- Portal login: `http://<IP-VPS>:<PUBLIC_PORT>`
+- Setelah login, dashboard OpenWA tampil (proxy)
+- Kelola user/role: `/users` (admin)
+- OpenWA API key: `docker exec openwa-api cat /app/data/.api-key`
 
 ## Catatan
-- Default bind host 0.0.0.0 agar bisa diakses via IP public/NAT.
-- Data persist di volume Docker `openwa_openwa-data`.
-- Untuk production (Postgres/Redis/MinIO), gunakan profile compose resmi OpenWA.
+- NAT kamu: public 9812 -> internal portal port (default 2785).
+- Data OpenWA persist di volume Docker. Data portal di `/opt/openwa-portal/data`.
