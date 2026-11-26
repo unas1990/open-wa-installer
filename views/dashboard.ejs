@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Dashboard - Open WA</title>
+<style>body{font-family:system-ui;background:#0f172a;color:#e2e8f0;margin:0;padding:20px}
+nav{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+a{color:#38bdf8;text-decoration:none;margin-left:12px}
+.card{background:#1e293b;padding:20px;border-radius:12px;margin-bottom:16px}
+button{padding:10px 16px;background:#22c55e;border:none;border-radius:6px;color:#fff;cursor:pointer}
+input,textarea{width:100%;padding:10px;margin:8px 0;border-radius:6px;border:1px solid #334155;background:#0f172a;color:#e2e8f0;box-sizing:border-box}
+.status{font-weight:700}
+.ready{color:#22c55e}.qr{color:#f59e0b}</style></head>
+<body>
+<nav><h1>Open WA</h1><div><span><%= user.username %> (<%= user.role %>)</span>
+<% if (user.role==='admin') { %><a href="/users">Users</a><% } %>
+<form method="post" action="/logout" style="display:inline"><button style="background:#ef4444;margin-left:12px">Logout</button></form></div></nav>
+
+<div class="card">
+<h2>WhatsApp Status: <span class="status <%= wa.status==='ready'?'ready':'qr' %>"><%= wa.status %></span></h2>
+<% if (wa.status==='qr' && wa.qrDataUrl) { %>
+<p>Scan QR with WhatsApp:</p><img src="<%= wa.qrDataUrl %>" alt="QR">
+<% } %>
+<% if (wa.status==='ready' && wa.info) { %>
+<p>Logged in as: <%= wa.info.wid && wa.info.wid.user %></p>
+<% } %>
+</div>
+
+<% if (user.role!=='viewer') { %>
+<div class="card">
+<h2>Send Message</h2>
+<form method="post" action="/send">
+<input name="to" placeholder="628xxx (no +)" required>
+<textarea name="text" rows="3" placeholder="message" required></textarea>
+<button type="submit">Send</button>
+</form>
+</div>
+<% } %>
+</body></html>
