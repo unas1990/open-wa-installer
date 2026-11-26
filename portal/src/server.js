@@ -108,6 +108,14 @@ const proxy = createProxyMiddleware({
   // Allowed origins are configured in OpenWA via CORS_ORIGINS.
 });
 
+// API integrations: allow direct OpenWA API key (no portal session cookie)
+app.use((req,res,next)=>{
+  if(req.path.startsWith('/api') && (req.headers['x-api-key'] || req.headers.authorization)){
+    return proxy(req,res,next);
+  }
+  next();
+});
+
 app.use('/', auth.requireAuth, proxy);
 
 const port = process.env.PORT || 2785;
