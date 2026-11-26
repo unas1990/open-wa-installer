@@ -40,9 +40,19 @@ app.post('/login', urlencoded, (req,res)=>{
   }
   req.session.userId=u.id;
   req.session.user={id:u.id,username:u.username,role:u.role};
-  res.redirect('/');
+  res.redirect('/auto-login');
 });
 app.post('/logout', (req,res)=>{req.session.destroy(()=>res.redirect('/login'));});
+
+// inject OpenWA API key into browser session, then open dashboard
+app.get('/auto-login', auth.requireAuth, (req,res)=>{
+  let key = '';
+  try {
+    key = execSync('docker exec openwa-api cat /app/data/.api-key', { encoding:'utf8', timeout:5000 }).trim();
+  } catch (e) {}
+  if(!key) return res.status(500).send('Gagal membaca API key OpenWA dari container.');
+  res.type('html').send(`<!DOCTYPE html><html><body><p>Menyiapkan OpenWA...</p><script>sessionStorage.setItem('openwa_api_key', ${JSON.stringify(key)});location.replace('/');</script></body></html>`);
+});
 
 // change password
 app.get('/password', auth.requireAuth, (req,res)=>res.render('password',{user:req.session.user,error:null}));
