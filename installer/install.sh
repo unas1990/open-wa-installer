@@ -19,7 +19,9 @@ if ! command -v node >/dev/null 2>&1; then
 fi
 
 # Chromium for whatsapp-web.js
-apt-get install -y chromium chromium-sandbox fonts-liberation libnss3 libatk-bridge2.0-0 libxkbcommon0 libgtk-3-0 2>/dev/null || true
+apt-get install -y chromium-browser chromium fonts-liberation libnss3 libatk-bridge2.0-0 libxkbcommon0 libgtk-3-0 2>/dev/null || apt-get install -y chromium fonts-liberation libnss3 libatk-bridge2.0-0 libxkbcommon0 libgtk-3-0 2>/dev/null || true
+CHROME_PATH="$(command -v chromium-browser || command -v chromium || echo /usr/bin/chromium)"
+export CHROME_PATH
 
 # PM2
 npm install -g pm2
@@ -39,6 +41,7 @@ PORT=$PORT
 SESSION_SECRET=$SECRET
 DB_PATH=$APP_DIR/data/app.db
 WA_CLIENT_ID=openwa
+CHROME_PATH=$CHROME_PATH
 ADMIN_USER=$ADMIN_USER
 ADMIN_PASS=$ADMIN_PASS
 NODE_ENV=production
