@@ -43,6 +43,20 @@ app.post('/login', urlencoded, (req,res)=>{
 });
 app.post('/logout', (req,res)=>{req.session.destroy(()=>res.redirect('/login'));});
 
+// change password
+app.get('/password', auth.requireAuth, (req,res)=>res.render('password',{user:req.session.user,error:null}));
+app.post('/password', auth.requireAuth, urlencoded, (req,res)=>{
+  const u = db.prepare('SELECT * FROM users WHERE id=?').get(req.session.userId);
+  if(!u || !auth.checkPassword(req.body.old || '', u.password_hash)){
+    return res.render('password',{user:req.session.user,error:'Password lama salah'});
+  }
+  if(!req.body.new || req.body.new.length < 6){
+    return res.render('password',{user:req.session.user,error:'Password baru minimal 6 karakter'});
+  }
+  auth.updatePassword(req.session.userId, req.body.new);
+  res.redirect('/');
+});
+
 // user management
 app.get('/users', auth.requireRole('admin'), (req,res)=>{
   res.render('users',{user:req.session.user, users:auth.listUsers(), roles:auth.ROLES});

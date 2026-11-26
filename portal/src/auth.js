@@ -10,6 +10,7 @@ function createUser(username,password,role='viewer'){
   return db.prepare('INSERT INTO users (username,password_hash,role) VALUES (?,?,?)').run(username,hashPassword(password),role);
 }
 function updateUserRole(id,role){ if(!ROLES.includes(role)) throw new Error('bad role'); db.prepare('UPDATE users SET role=? WHERE id=?').run(role,id); }
+function updatePassword(id,password){ db.prepare('UPDATE users SET password_hash=? WHERE id=?').run(hashPassword(password),id); }
 function deleteUser(id){ db.prepare('DELETE FROM users WHERE id=?').run(id); }
 function listUsers(){ return db.prepare('SELECT id,username,role,created_at FROM users ORDER BY id').all(); }
 function ensureAdmin(){
@@ -32,4 +33,4 @@ function requireRole(min){
     next();
   };
 }
-module.exports={ROLES,hashPassword,checkPassword,getUser,createUser,updateUserRole,deleteUser,listUsers,ensureAdmin,requireAuth,requireRole};
+module.exports={ROLES,hashPassword,checkPassword,getUser,createUser,updateUserRole,updatePassword,deleteUser,listUsers,ensureAdmin,requireAuth,requireRole};
