@@ -5,6 +5,7 @@ const { createProxyMiddleware } = require('http-proxy-middleware');
 const path = require('path');
 const auth = require('./auth');
 const db = require('./db');
+const { execSync } = require('child_process');
 
 auth.ensureAdmin();
 
@@ -72,6 +73,15 @@ app.post('/users/:id/role', auth.requireRole('admin'), urlencoded, (req,res)=>{
 app.post('/users/:id/delete', auth.requireRole('admin'), (req,res)=>{
   if(String(req.params.id)!==String(req.session.user.id)) auth.deleteUser(req.params.id);
   res.redirect('/users');
+});
+
+// show OpenWA admin API key (admin only)
+app.get('/api-key', auth.requireRole('admin'), (req,res)=>{
+  let key = '';
+  try {
+    key = execSync('docker exec openwa-api cat /app/data/.api-key', { encoding: 'utf8', timeout: 5000 }).trim();
+  } catch (e) {}
+  res.render('apikey',{ user:req.session.user, key, error: !key });
 });
 
 // proxy to OpenWA backend
