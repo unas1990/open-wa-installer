@@ -70,12 +70,8 @@ const proxy = createProxyMiddleware({
   timeout: 0,
   proxyTimeout: 0,
   logLevel: 'silent',
-  onProxyReq: (proxyReq, req) => {
-    proxyReq.setHeader('origin', backendOrigin);
-  },
-  onProxyReqWs: (proxyReq, req) => {
-    proxyReq.setHeader('origin', backendOrigin);
-  }
+  // Keep the browser Origin so OpenWA CORS/WS checks can allow the public origin.
+  // Allowed origins are configured in OpenWA via CORS_ORIGINS.
 });
 
 app.use('/', auth.requireAuth, proxy);
