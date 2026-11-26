@@ -6,59 +6,73 @@ if [ "$(id -u)" -ne 0 ]; then
   exit 1
 fi
 
-APP_DIR="/opt/open-wa"
-SRC_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+APP_DIR="/opt/openwa"
+REPO_URL="https://github.com/rmyndharis/OpenWA.git"
 
 apt-get update
-apt-get install -y curl git whiptail ca-certificates gnupg
+apt-get install -y ca-certificates curl gnupg git whiptail
 
-# Node 20
-if ! command -v node >/dev/null 2>&1; then
-  curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
-  apt-get install -y nodejs
+# Docker
+if ! command -v docker >/dev/null 2>&1; then
+  install -m 0755 -d /etc/apt/keyrings
+  curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+  chmod a+r /etc/apt/keyrings/docker.gpg
+  . /etc/os-release
+  echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu ${VERSION_CODENAME} stable" > /etc/apt/sources.list.d/docker.list
+  apt-get update
+  apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 fi
+systemctl enable --now docker
 
-# Chromium for whatsapp-web.js
-apt-get install -y chromium-browser chromium fonts-liberation libnss3 libatk-bridge2.0-0 libxkbcommon0 libgtk-3-0 2>/dev/null || apt-get install -y chromium fonts-liberation libnss3 libatk-bridge2.0-0 libxkbcommon0 libgtk-3-0 2>/dev/null || true
-CHROME_PATH="$(command -v chromium-browser || command -v chromium || echo /usr/bin/chromium)"
-export CHROME_PATH
-
-# PM2
-npm install -g pm2
-
-# copy app
-mkdir -p "$APP_DIR"
-rsync -a --exclude node_modules --exclude .git "$SRC_DIR"/ "$APP_DIR"/ 2>/dev/null || cp -r "$SRC_DIR"/* "$APP_DIR"/
+# Clone OpenWA
+if [ ! -d "$APP_DIR/.git" ]; then
+  rm -rf "$APP_DIR"
+  git clone "$REPO_URL" "$APP_DIR"
+else
+  cd "$APP_DIR" && git pull --ff-only
+fi
 
 cd "$APP_DIR"
+
+PORT=$(whiptail --inputbox "Public port for OpenWA" 8 40 2785 3>&1 1>&2 2>&3)
+
+# .env
 if [ ! -f .env ]; then
-  ADMIN_USER=$(whiptail --inputbox "Admin username" 8 40 admin 3>&1 1>&2 2>&3)
-  ADMIN_PASS=$(whiptail --passwordbox "Admin password" 8 40 3>&1 1>&2 2>&3)
-  PORT=$(whiptail --inputbox "App port" 8 40 3000 3>&1 1>&2 2>&3)
-  SECRET=$(openssl rand -hex 32)
   cat > .env <<EOF
-PORT=$PORT
-SESSION_SECRET=$SECRET
-DB_PATH=$APP_DIR/data/app.db
-WA_CLIENT_ID=openwa
-CHROME_PATH=$CHROME_PATH
-ADMIN_USER=$ADMIN_USER
-ADMIN_PASS=$ADMIN_PASS
+BIND_HOST=0.0.0.0
+API_PORT=$PORT
 NODE_ENV=production
+TZ=UTC
 EOF
+else
+  # ensure bind host external
+  grep -q '^BIND_HOST=' .env && sed -i "s|^BIND_HOST=.*|BIND_HOST=0.0.0.0|" .env || echo 'BIND_HOST=0.0.0.0' >> .env
+  grep -q '^API_PORT=' .env && sed -i "s|^API_PORT=.*|API_PORT=$PORT|" .env || echo "API_PORT=$PORT" >> .env
 fi
 
-mkdir -p data
-npm install --omit=dev
+docker compose -f docker-compose.dev.yml up -d --build
 
-# firewall
-if command -v ufw >/dev/null; then
-  ufw allow "${PORT:-3000}/tcp" || true
+echo "Waiting for OpenWA to become healthy..."
+for i in $(seq 1 60); do
+  if docker exec openwa-api curl -sf http://localhost:2785/api/health/ready >/dev/null 2>&1; then
+    break
+  fi
+  sleep 5
+done
+
+API_KEY=""
+if docker exec openwa-api test -f /app/data/.api-key 2>/dev/null; then
+  API_KEY="$(docker exec openwa-api cat /app/data/.api-key)"
 fi
 
-pm2 delete open-wa 2>/dev/null || true
-pm2 start src/server.js --name open-wa --cwd "$APP_DIR"
-pm2 save
-pm2 startup systemd -u root --hp /root >/dev/null 2>&1 || true
-
-echo "Installed. Open http://<server-ip>:${PORT:-3000}"
+echo ""
+echo "OpenWA installed."
+echo "Dashboard/API: http://<server-ip>:$PORT"
+echo "Swagger:       http://<server-ip>:$PORT/api/docs (if enabled)"
+if [ -n "$API_KEY" ]; then
+  echo "Admin API key: $API_KEY"
+else
+  echo "Admin API key: docker exec openwa-api cat /app/data/.api-key"
+fi
+echo ""
+echo "Logs: docker logs -f openwa-api"

@@ -1,23 +1,26 @@
-# Open WA Gateway
+# OpenWA Installer
 
-WhatsApp gateway + admin GUI (roles: admin/operator/viewer).
-
-## OS recommendation (Proxmox VM, NAT via Mikrotik public IP)
-- Use **Debian 12 (Bookworm) minimal** for stability/long support.
-- Alternative: Ubuntu 24.04 LTS.
-- VM: 2 vCPU, 4GB RAM, 40GB disk. Forward ports (app + 22) via Mikrotik NAT.
+Installer untuk **OpenWA** (official) dari https://www.open-wa.org/ (rmyndharis/OpenWA) di VPS Ubuntu 24.
 
 ## Install
 ```bash
+sudo apt update && sudo apt install -y git
+git clone https://github.com/unas1990/open-wa-installer.git
+cd open-wa-installer
 sudo bash installer/install.sh
 ```
-Installer uses whiptail GUI prompts for admin creds and port.
 
-## Roles
-- admin: manage users/roles
-- operator: send messages
-- viewer: read-only dashboard
+Installer akan:
+- Install Docker + Compose
+- Clone OpenWA ke `/opt/openwa`
+- Jalankan single-container (SQLite) dengan dashboard di satu port
+- Tampilkan Admin API key
 
-## Notes
-- First run shows QR in dashboard; scan with WhatsApp.
-- Data stored in /opt/open-wa/data.
+## Akses
+- Dashboard/API: `http://<IP-VPS>:<PORT>` (default 2785)
+- Admin API key: `docker exec openwa-api cat /app/data/.api-key`
+
+## Catatan
+- Default bind host 0.0.0.0 agar bisa diakses via IP public/NAT.
+- Data persist di volume Docker `openwa_openwa-data`.
+- Untuk production (Postgres/Redis/MinIO), gunakan profile compose resmi OpenWA.
